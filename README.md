@@ -5,4 +5,4 @@
 
 # 이 연결리스트는 무엇인가? 아래 블로그 링크를 참조하세요!
 
-**[블로그_링크](https://blog.naver.com/lastime1650/223517385494)**
+**[https://blog.naver.com/lastime1650/223517385494](https://blog.naver.com/lastime1650/223517385494)**
