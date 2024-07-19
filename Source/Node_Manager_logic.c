@@ -347,7 +347,7 @@ PDynamic_NODE Get_Node_2Dim(
 
 		}
 
-
+		current_node = (PDynamic_NODE)current_node->Next_Node;
 	} while (current_node != NULL);
 
 	return NULL;
