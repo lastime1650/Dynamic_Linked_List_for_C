@@ -8,32 +8,29 @@ PDynamic_NODE external_current_node = NULL;
 
 
 
-// ³ëµå ÃÑ °ü¸® ÇÔ¼ö 
+// ë…¸ë“œ ì´ ê´€ë¦¬ í•¨ìˆ˜ 
 PDynamic_NODE Build_up_Node(
 	PUCHAR DATA,
 	ULONG32 DATA_SIZE,
 
 	BOOLEAN is_init,
-	ULONG64* inout_NODE_SECTION_INDEX, // ¼º°øÇÏ¸é ³ëµå ÀÎ½Ä ÀÎµ¦½º¹øÈ£¸¦ ÇÒ´ç¹Ş°ÔµÊ 
-	PDynamic_NODE* output_Start_Node_of_NODE_SECTION // index ¼½¼Ç ³ëµåµéÀÇ ½ÃÀÛÁÖ¼Ò 
+	PDynamic_NODE* output_Start_Node_of_NODE_SECTION, // index ì„¹ì…˜ ë…¸ë“œë“¤ì˜ ì‹œì‘ì£¼ì†Œ 
+
+	ULONG32 Node_Search_VALUE
+	
 ) {
-	if (is_init) {
-		if (output_Start_Node_of_NODE_SECTION == NULL) return NULL;
-	}
-	else {
-		if (inout_NODE_SECTION_INDEX == NULL) return NULL;
-	}
+	if (output_Start_Node_of_NODE_SECTION == NULL) return NULL;
 
 	WaitForSingleObject(hMutex, INFINITE);
 
 	if (external_current_node == NULL) {
 		if (is_init) {
 			external_current_NODE_SECTION_INDEX++;
-			external_current_node = Create_Node(NULL, external_current_NODE_SECTION_INDEX, DATA, DATA_SIZE);
+			external_current_node = Create_Node(NULL, NULL, external_current_NODE_SECTION_INDEX, DATA, DATA_SIZE, Node_Search_VALUE);
 			external_start_node = external_current_node;
 		}
 		else {
-			external_current_node = Create_Node(NULL, *inout_NODE_SECTION_INDEX, DATA, DATA_SIZE);
+			external_current_node = Create_Node(NULL, NULL, ((PDynamic_NODE)*output_Start_Node_of_NODE_SECTION)->NODE_SECTION_INDEX , DATA, DATA_SIZE, Node_Search_VALUE);
 			external_start_node = external_current_node;
 		}
 		
@@ -41,20 +38,18 @@ PDynamic_NODE Build_up_Node(
 	else {
 		if (is_init) {
 			external_current_NODE_SECTION_INDEX++;
-			external_current_node = Append_Node(external_current_node, external_current_NODE_SECTION_INDEX, DATA, DATA_SIZE);
+			external_current_node = Append_Node(NULL,external_current_node, external_current_NODE_SECTION_INDEX, DATA, DATA_SIZE, Node_Search_VALUE);
 
 		}
 		else {
-			external_current_node = Append_Node(external_current_node, *inout_NODE_SECTION_INDEX, DATA, DATA_SIZE);
+			external_current_node = Append_Node(((PDynamic_NODE)*output_Start_Node_of_NODE_SECTION)->NODE_SECTION_START_NODE_ADDRESS,external_current_node, ((PDynamic_NODE)*output_Start_Node_of_NODE_SECTION)->NODE_SECTION_INDEX, DATA, DATA_SIZE, Node_Search_VALUE);
 		}
 	}
 
 	if (is_init) {
-		*inout_NODE_SECTION_INDEX = external_current_NODE_SECTION_INDEX;
 		*output_Start_Node_of_NODE_SECTION = external_current_node;
 	}
 	
-
 	//print_node(external_start_node);
 
 	ReleaseMutex(hMutex);
@@ -70,18 +65,29 @@ PDynamic_NODE Build_up_Node(
 /// <param name="DATA"></param>
 /// <param name="DATA_SIZE"></param>
 /// <returns></returns>
-PDynamic_NODE Create_Node(PUCHAR Previous_Node, ULONG64 NODE_SECTION_INDEX, PUCHAR DATA, ULONG32 DATA_SIZE) {
+PDynamic_NODE Create_Node(PUCHAR SECTION_START_NODE_ADDRESS, PUCHAR Previous_Node, ULONG64 NODE_SECTION_INDEX, PUCHAR DATA, ULONG32 DATA_SIZE, ULONG32 Node_Search_VALUE) {
 
 	PDynamic_NODE New_Node = (PDynamic_NODE)malloc(sizeof(Dynamic_NODE));
 	if (New_Node == NULL) return NULL;
 	memset(New_Node, 0, sizeof(Dynamic_NODE));
 
+	/*
+		í•­ìƒ ëª¨ë“  ë…¸ë“œë“¤ì€ ìì‹ ì˜ ì„¹ì…˜ì—ì„œ "ì‹œì‘ë…¸ë“œ" ì£¼ì†Œ ê°’ì„ ê°€ì§€ê³  ìˆì–´ì•¼í•œë‹¤. (ë°”ë€Œë©´ ì•ˆë˜ë©°, ì¼ê´€ì„±ìœ ì§€)
+	*/
+	if (SECTION_START_NODE_ADDRESS==NULL) {
+		//ìµœì´ˆ ë…¸ë“œ
+		New_Node->NODE_SECTION_START_NODE_ADDRESS = (PUCHAR)New_Node; // ì„¹ì…˜ ë…¸ë“œë“¤ì˜ ì‹œì‘ ì£¼ì†Œ ì €ì¥
+	}
+	else {
+		//Append ë…¸ë“œ 
+		New_Node->NODE_SECTION_START_NODE_ADDRESS = (PUCHAR)SECTION_START_NODE_ADDRESS;
+	}
 
 	New_Node->Previous_Node = Previous_Node;
 
 	New_Node->NODE_SECTION_INDEX = NODE_SECTION_INDEX;
 
-	// µ¥ÀÌÅÍ »õ·ÎÀúÀå
+	// ë°ì´í„° ìƒˆë¡œì €ì¥
 	New_Node->DATA = (PUCHAR)malloc(DATA_SIZE);
 	if (New_Node->DATA == NULL) {
 		free(New_Node);
@@ -91,17 +97,31 @@ PDynamic_NODE Create_Node(PUCHAR Previous_Node, ULONG64 NODE_SECTION_INDEX, PUCH
 
 	New_Node->DATA_SIZE = DATA_SIZE;
 
+	//
+	New_Node->Node_Search_VALUE = Node_Search_VALUE;
+
+	New_Node->is_end_node = TRUE; // ì¼ë‹¨ ë§ˆì§€ë§‰ ë…¸ë“œì¼ ìˆ˜ ë°–ì— ì—†ìœ¼ë‹ˆê¹Œ,,
+
 	New_Node->Next_Node = NULL;
 
 	return New_Node;
 
 }
 
-PDynamic_NODE Append_Node(PDynamic_NODE NODE, ULONG64 NODE_SECTION_INDEX, PUCHAR DATA, ULONG32 DATA_SIZE) {
+PDynamic_NODE Append_Node(PUCHAR SECTION_START_NODE_ADDRESS, PDynamic_NODE NODE, ULONG64 NODE_SECTION_INDEX, PUCHAR DATA, ULONG32 DATA_SIZE, ULONG32 Node_Search_VALUE) {
 
-	PDynamic_NODE New_Node = Create_Node((PUCHAR)NODE, NODE_SECTION_INDEX, DATA, DATA_SIZE);
+
+	PDynamic_NODE New_Node = Create_Node(SECTION_START_NODE_ADDRESS,(PUCHAR)NODE, NODE_SECTION_INDEX, DATA, DATA_SIZE, Node_Search_VALUE);
 
 	New_Node->Previous_Node = (PUCHAR)NODE;
+
+	if (SECTION_START_NODE_ADDRESS == NULL) {
+		NODE->is_end_node = TRUE; // UPDATE
+	}
+	else {
+		NODE->is_end_node = FALSE; // UPDATE
+	}
+	
 
 	NODE->Next_Node = (PUCHAR)New_Node;
 
@@ -115,7 +135,7 @@ VOID print_node(){
 	PDynamic_NODE current_node = external_start_node;
 
 	do {
-		printf("³ëµåÀÎµ¦½º:[%d] /  ³ëµå ÁÖ¼Ò: %p  /  µ¥ÀÌÅÍ»çÀÌÁî: %d \n", current_node->NODE_SECTION_INDEX, current_node, current_node->DATA_SIZE);
+		printf("ë…¸ë“œì¸ë±ìŠ¤:[%d] /  ë…¸ë“œ ì£¼ì†Œ: %p  /  ë°ì´í„°ì‚¬ì´ì¦ˆ: %d / ë…¸ë“œ_ì„œì¹­_ê°’: %d  / ë…¸ë“œ ëì¸ê°€? %d \n", current_node->NODE_SECTION_INDEX, current_node, current_node->DATA_SIZE, current_node->Node_Search_VALUE, current_node->is_end_node);
 		current_node = (PDynamic_NODE)current_node->Next_Node;
 	} while (current_node!=NULL);
 	printf("\n\n");
@@ -125,57 +145,65 @@ VOID print_node(){
 
 BOOLEAN Remove_Node_internal(PDynamic_NODE Specified_Node);
 
-PDynamic_NODE Remove_Node(PDynamic_NODE NODE_SECTION_Start_Address) {
+BOOLEAN Remove_Node(PDynamic_NODE NODE_SECTION_Start_Address) {
 	WaitForSingleObject(hMutex, INFINITE);
 	print_node();
 	PDynamic_NODE current_node = external_start_node;
 	ULONG64 NODE_SECTION_INDEX = 0xFFFFFFFF;
 
-	ULONG64 current_Maximum_of_NODE_SECTION_INDEX = 0;// ÀüÃ¼ Section³ëµå ¼ıÀÚÁß °¡Àå Å« °ªÀ» ±¸ÇÏ°í, °Å±â¿¡¼­ Àü¿ª ¼½¼Ç ¹øÈ£ ¾÷µ¥ÀÌÆ®
+	ULONG64 current_Maximum_of_NODE_SECTION_INDEX = 0;// ì „ì²´ Sectionë…¸ë“œ ìˆ«ìì¤‘ ê°€ì¥ í° ê°’ì„ êµ¬í•˜ê³ , ê±°ê¸°ì—ì„œ ì „ì—­ ì„¹ì…˜ ë²ˆí˜¸ ì—…ë°ì´íŠ¸
 
 	do {
 
-		PDynamic_NODE tmp = (PDynamic_NODE)current_node->Next_Node;// ¹Ì¸® next³ëµå ±â¾ï.
+		PDynamic_NODE tmp = (PDynamic_NODE)current_node->Next_Node;// ë¯¸ë¦¬ nextë…¸ë“œ ê¸°ì–µ.
 
-		// ½ÃÀÛÁÖ¼ÒºÎÅÍ ¾ò¾î¾ß index¾òÀ½
+		// ì‹œì‘ì£¼ì†Œë¶€í„° ì–»ì–´ì•¼ indexì–»ìŒ
 		if ((PUCHAR)NODE_SECTION_Start_Address == (PUCHAR)current_node) {
 			NODE_SECTION_INDEX = NODE_SECTION_Start_Address->NODE_SECTION_INDEX;
 		}
 
 
 
-		// index¾ò¾úÀ» ¶§ ³ëµå ¿¬¼â»èÁ¦ °¡´É.
+		// indexì–»ì—ˆì„ ë•Œ ë…¸ë“œ ì—°ì‡„ì‚­ì œ ê°€ëŠ¥.
 		 if (NODE_SECTION_INDEX != 0xFFFFFFFF) {
 			 if (current_node->NODE_SECTION_INDEX == NODE_SECTION_INDEX) {
 				 /*
-					 ÀÌÁß ¿¬°á¸®½ºÆ® ¼­·Î ¿¬°áÇØÁÖ°í ÇÒ´çÇØÁ¦ÇÏ±â.
+					 ì´ì¤‘ ì—°ê²°ë¦¬ìŠ¤íŠ¸ ì„œë¡œ ì—°ê²°í•´ì£¼ê³  í• ë‹¹í•´ì œí•˜ê¸°.
 				 */
 				 Remove_Node_internal(current_node);
 
 
 			 }
 			 else {
-				 /* NODE_SECTION_INDEX ÆÄ¶ó¹ÌÅÍ °ªº¸´Ù Å« °æ¿ì - 1 ¾¿ ÇÏ±â.*/
+				 /* NODE_SECTION_INDEX íŒŒë¼ë¯¸í„° ê°’ë³´ë‹¤ í° ê²½ìš° - 1 ì”© í•˜ê¸°.*/
 				 if (current_node->NODE_SECTION_INDEX > NODE_SECTION_INDEX) {
 				 	current_node->NODE_SECTION_INDEX--;
 				 }
 			 }
+
+			 // ì „ì—­ë³€ìˆ˜ - ë…¸ë“œ ì„¹ì…˜ ì¸ë±ìŠ¤ ì „ì—­ë³€ìˆ˜ ì—…ë°ì´íŠ¸ë¥¼ ìœ„í•œ,
+			 if (current_Maximum_of_NODE_SECTION_INDEX < current_node->NODE_SECTION_INDEX) {
+				 current_Maximum_of_NODE_SECTION_INDEX = current_node->NODE_SECTION_INDEX;
+			 }
+
 		}
 
-		 // Àü¿ªº¯¼ö - ³ëµå ¼½¼Ç ÀÎµ¦½º Àü¿ªº¯¼ö ¾÷µ¥ÀÌÆ®¸¦ À§ÇÑ,
-		 if (current_Maximum_of_NODE_SECTION_INDEX < current_node->NODE_SECTION_INDEX) {
-			 current_Maximum_of_NODE_SECTION_INDEX = current_node->NODE_SECTION_INDEX;
-		 }
+		 
 		
 
 		current_node = tmp;
 	} while (current_node != NULL);
 
-	// ¼½¼Ç ¹øÈ£ ¾÷µ¥ÀÌÆ® 
+	// ì„¹ì…˜ ë²ˆí˜¸ ê²€ì¦
+	if (NODE_SECTION_INDEX == 0xFFFFFFFF) return FALSE;
+
+	// ì„¹ì…˜ ë²ˆí˜¸ ì—…ë°ì´íŠ¸ 
 	external_current_NODE_SECTION_INDEX = current_Maximum_of_NODE_SECTION_INDEX;
 
 	print_node();
 	ReleaseMutex(hMutex);
+
+	return TRUE;
 }
 
 BOOLEAN Remove_Node_internal(PDynamic_NODE Specified_Node) {
@@ -223,10 +251,10 @@ BOOLEAN is_valid_address(PDynamic_NODE NODE_SECTION_Start_Address) {
 }
 
 
-PDynamic_NODE Get_Node(
+PDynamic_NODE Get_Node_1Dim(
 	PDynamic_NODE NODE_SECTION_Start_Address,
 	ULONG32 node_count_for_field
-) {// ³ëµå °¡Á®¿À±â ( count )
+) {// ë…¸ë“œ ê°€ì ¸ì˜¤ê¸° ( count )
 
 	if (external_start_node == NULL || external_current_node == NULL ) return FALSE;
 
@@ -247,12 +275,79 @@ PDynamic_NODE Get_Node(
 		if (is_found_start_node && remember_NODE_SECTION_INDEX!= 0xFFFFFFFF && current_node->NODE_SECTION_INDEX == remember_NODE_SECTION_INDEX) {
 			printf("node_count_for_field -> %d / %d \n", node_count_for_field, count);
 			if (node_count_for_field == count) {
-				return current_node; // ³ëµå ÃßÃâ 
+				return current_node; // ë…¸ë“œ ì¶”ì¶œ 
 			}
 			count++;
 		}
 
 		current_node = (PDynamic_NODE)current_node->Next_Node;
+	} while (current_node != NULL);
+
+	return NULL;
+}
+
+
+PDynamic_NODE Get_Node_memcmp_1Dim(
+	PDynamic_NODE NODE_SECTION_Start_Address,
+	PUCHAR DATA,
+	ULONG32 DATA_SIZE
+) {
+
+	if (external_start_node == NULL || external_current_node == NULL) return FALSE;
+
+	PDynamic_NODE current_node = external_start_node;
+	BOOLEAN is_found_start_node = FALSE;
+
+
+	ULONG64 remember_NODE_SECTION_INDEX = 0xFFFFFFFF;
+
+	do {
+
+		if (NODE_SECTION_Start_Address == current_node) {
+			is_found_start_node = TRUE;
+			remember_NODE_SECTION_INDEX = current_node->NODE_SECTION_INDEX;
+		}
+
+		if (is_found_start_node && remember_NODE_SECTION_INDEX != 0xFFFFFFFF && current_node->NODE_SECTION_INDEX == remember_NODE_SECTION_INDEX) {
+			
+			if (current_node->DATA_SIZE >= DATA_SIZE && memcmp(DATA, current_node->DATA, DATA_SIZE)==0   ) {
+				return current_node; // ë…¸ë“œ ì¶”ì¶œ 
+			}
+		}
+
+		current_node = (PDynamic_NODE)current_node->Next_Node;
+	} while (current_node != NULL);
+
+	return NULL;
+}
+
+//
+
+PDynamic_NODE Get_Node_2Dim(
+	PDynamic_NODE NODE_SECTION_Start_Address, // ì‹œì‘ì  
+	PUCHAR DATA,
+	ULONG32 DATA_SIZE,
+	ULONG32 Node_Search_VALUE, // ë…¸ë“œ ì‹ë³„ìš©
+
+	PDynamic_NODE* OUTPUT_SECTION_START_ADDRESS
+) {
+	if (external_start_node == NULL || external_current_node == NULL) return NULL;
+
+	PDynamic_NODE current_node = external_start_node;
+
+
+	do {
+
+		if (NODE_SECTION_Start_Address->Node_Search_VALUE == current_node->Node_Search_VALUE) {
+
+			if ((current_node->DATA_SIZE >= DATA_SIZE) && memcmp(current_node->DATA, DATA, DATA_SIZE) == 0) {
+				
+				*OUTPUT_SECTION_START_ADDRESS = (PDynamic_NODE)current_node->NODE_SECTION_START_NODE_ADDRESS;
+			}
+
+		}
+
+
 	} while (current_node != NULL);
 
 	return NULL;
