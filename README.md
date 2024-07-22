@@ -11,7 +11,7 @@
 
 ---
 
-![initial](https://github.com/lastime1650/Dynamic_Linked_List_for_C/blob/main/images/image.png)
+![initial](https://github.com/lastime1650/Dynamic_Linked_List_for_C/blob/main/images/imag2.png)
 
 현재 위 사진과 같은 구성도로 구현되었습니다. 
 
