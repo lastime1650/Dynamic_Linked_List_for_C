@@ -30,9 +30,17 @@
 
 # 2024년 07월 19일
 
-1. 섹션 단위로 관리하는 함수가 추가됨
+1. SECTION(섹션) 단위로 관리하는 함수가 추가됨
 
-2. 전체적인 함수 파라미터 추가 수정됨 
+2. 전체적인 함수 파라미터 추가 수정됨
+
+<br>
+
+![initial](https://github.com/lastime1650/Dynamic_Linked_List_for_C/blob/main/images/imag3.png)
+
+3. NODE_SEARCH_VALUE 라는 인덱스 도입하여 SECTION들을 묶어서 취급할 수 있도록 함. 
+
+
 
 # 2024년 07월 18일 
 
