@@ -77,9 +77,10 @@ PDynamic_NODE Create_Node(PUCHAR SECTION_START_NODE_ADDRESS, PUCHAR Previous_Nod
 	if (SECTION_START_NODE_ADDRESS==NULL) {
 		//최초 노드
 		New_Node->NODE_SECTION_START_NODE_ADDRESS = (PUCHAR)New_Node; // 섹션 노드들의 시작 주소 저장
+		New_Node->NODE_RELATION_INDEX = 0; //최초, 상대적 인덱스 초기화 
 	}
 	else {
-		//Append 노드 
+		//Append 노드생성 
 		New_Node->NODE_SECTION_START_NODE_ADDRESS = (PUCHAR)SECTION_START_NODE_ADDRESS;
 	}
 
@@ -110,22 +111,73 @@ PDynamic_NODE Create_Node(PUCHAR SECTION_START_NODE_ADDRESS, PUCHAR Previous_Nod
 
 PDynamic_NODE Append_Node(PUCHAR SECTION_START_NODE_ADDRESS, PDynamic_NODE NODE, ULONG64 NODE_SECTION_INDEX, PUCHAR DATA, ULONG32 DATA_SIZE, ULONG32 Node_Search_VALUE) {
 
+	BOOLEAN is_SUCCESS = FALSE;
+	PDynamic_NODE New_Node = NULL;
 
-	PDynamic_NODE New_Node = Create_Node(SECTION_START_NODE_ADDRESS,(PUCHAR)NODE, NODE_SECTION_INDEX, DATA, DATA_SIZE, Node_Search_VALUE);
-
-	New_Node->Previous_Node = (PUCHAR)NODE;
-
+	// SECTION_START_NODE_ADDRESS 가 NULL이면, 전혀 새로운 노드의 특정 시작주소임 
+	/*
+		주의, NODE를 바로 참조하면 일관성 무너짐, 그렇기 때문에, 검증하여 얻어와야함
+	*/
 	if (SECTION_START_NODE_ADDRESS == NULL) {
-		NODE->is_end_node = TRUE; // UPDATE
+		/*
+			아예 새로운 노드(새로운 SECTION을 의미) 를 생성하는 것임
+			전역적으로 생성되고있는 연결리스트안에서 지속적으로 추가하는 것이므로, Append_Node 함수안에서도 이러한 구현이 필요함.
+		*/
+
+		New_Node = Create_Node(SECTION_START_NODE_ADDRESS, (PUCHAR)NODE, NODE_SECTION_INDEX, DATA, DATA_SIZE, Node_Search_VALUE);//APPEND
+		if (New_Node == NULL) return NULL;
+
+		is_SUCCESS = TRUE;
+
 	}
 	else {
-		NODE->is_end_node = FALSE; // UPDATE
+		/*
+			이미 연관있는 노드가 존재할 때 처리하는 영역
+
+			참조 기준은 SECTION_START_NODE_ADDRESS 노드 필드를 활용한다.
+
+		*/
+		PDynamic_NODE current = (PDynamic_NODE)SECTION_START_NODE_ADDRESS;//전역변수가 아닌, 섹션노드의 시작주소로 하면 비교적 빠름
+		do {
+
+			// 같은 섹션내에서만 비교하도록 함
+			if (current->NODE_SECTION_INDEX == NODE_SECTION_INDEX && current->is_end_node == TRUE) {
+
+				New_Node = Create_Node(SECTION_START_NODE_ADDRESS, (PUCHAR)NODE, NODE_SECTION_INDEX, DATA, DATA_SIZE, Node_Search_VALUE);//APPEND
+				if (New_Node == NULL) return NULL;
+
+				/*
+					is_end_node 부울변수를 각각 업데이트한다. 
+				*/
+
+				//이전의 부울을 FALSE로하여 "끝이 아님"을 설정
+				current->is_end_node = FALSE;
+
+				//상대 인덱스 값 (++)하여 추가하기
+				New_Node->NODE_RELATION_INDEX = current->NODE_RELATION_INDEX + 1; // 상대 인덱스를 +1 증가함 
+
+				is_SUCCESS = TRUE;
+
+			}
+
+				current = (PDynamic_NODE)(current->Next_Node);
+		} while (current != NULL);
+
 	}
 	
+	if (is_SUCCESS) {
 
-	NODE->Next_Node = (PUCHAR)New_Node;
+		New_Node->Previous_Node = (PUCHAR)NODE;
 
-	return New_Node;
+		NODE->Next_Node = (PUCHAR)New_Node;
+
+		return New_Node;
+	}
+	else {
+		return NULL;
+	}
+
+	
 
 }
 
@@ -135,7 +187,7 @@ VOID print_node(){
 	PDynamic_NODE current_node = external_start_node;
 
 	do {
-		printf("노드인덱스:[%d] /  노드 주소: %p  /  데이터사이즈: %d / 노드_서칭_값: %d  / 노드 끝인가? %d \n", current_node->NODE_SECTION_INDEX, current_node, current_node->DATA_SIZE, current_node->Node_Search_VALUE, current_node->is_end_node);
+		printf("상대인덱스[%d] 노드인덱스:[%d] /  노드 주소: %p  /  데이터사이즈: %d / 노드_서칭_값: %d  / 노드 끝인가? %d \n", current_node->NODE_RELATION_INDEX,current_node->NODE_SECTION_INDEX, current_node, current_node->DATA_SIZE, current_node->Node_Search_VALUE, current_node->is_end_node);
 		current_node = (PDynamic_NODE)current_node->Next_Node;
 	} while (current_node!=NULL);
 	printf("\n\n");
@@ -348,6 +400,7 @@ PDynamic_NODE Get_Node_2Dim(
 		}
 
 		current_node = (PDynamic_NODE)current_node->Next_Node;
+
 	} while (current_node != NULL);
 
 	return NULL;
