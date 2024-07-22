@@ -5,9 +5,16 @@
 
 ---
 
-# 이 연결리스트는 무엇인가? 아래 블로그 링크를 참조하세요!
+# 이 연결리스트는 무엇인가? 자세한 것은 아래 블로그 링크를 참조하세요!
 
 **[https://blog.naver.com/lastime1650/223517385494](https://blog.naver.com/lastime1650/223517385494)**
+
+---
+
+![initial](https://github.com/lastime1650/Dynamic_Linked_List_for_C/blob/main/images/image.png)
+
+현재 위 사진과 같은 구성도로 구현되었습니다. 
+
 
 ---
 
