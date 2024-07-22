@@ -13,7 +13,7 @@
 
 # 2024년 07월 22일
 
-1. **NODE_RELATION_INDEX** 라는 같은 섹션내에서 사용되는 상대적 인덱스 값을 추가함!
+1. **[NODE_RELATION_INDEX](https://github.com/lastime1650/Dynamic_Linked_List_for_C/blame/3f568e30823213097570682b56c837b16334cfcb/Source/Node_Manager_logic.c#L157) ** 라는 같은 섹션내에서 사용되는 상대적 인덱스 값을 추가함!
 
 # 2024년 07월 19일
 
