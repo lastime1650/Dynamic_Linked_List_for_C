@@ -16,6 +16,10 @@
 현재 위 사진과 같은 구성도로 구현되었습니다. 
 
 
+비동기가 아닌, 순차적으로 실행했을 때는 아래와 같은 이미지로 print 됩니다. 
+
+![initial](https://github.com/lastime1650/Dynamic_Linked_List_for_C/blob/main/images/p1.png)
+
 ---
 
 # 2024년 07월 22일
