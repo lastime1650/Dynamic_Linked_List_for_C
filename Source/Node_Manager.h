@@ -67,7 +67,14 @@ PDynamic_NODE Get_Node_2Dim(
 	PDynamic_NODE* OUTPUT_SECTION_START_ADDRESS
 );
 
+PDynamic_NODE Get_Node_2Dim_with_Relation_Index(
+	PDynamic_NODE NODE_SECTION_Start_Address, // 시작점 
+	PUCHAR DATA,
+	ULONG32 DATA_SIZE,
 
+	PDynamic_NODE* OUTPUT_SECTION_START_ADDRESS,
+	ULONG64 Relation_index
+);
 
 
 
