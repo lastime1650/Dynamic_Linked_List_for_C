@@ -405,3 +405,72 @@ PDynamic_NODE Get_Node_2Dim(
 
 	return NULL;
 }
+
+
+
+PDynamic_NODE Get_Node_2Dim_with_Relation_Index(
+	PDynamic_NODE NODE_SECTION_Start_Address, // 시작점 
+	PUCHAR DATA,
+	ULONG32 DATA_SIZE,
+
+	PDynamic_NODE* OUTPUT_SECTION_START_ADDRESS,
+	ULONG64 Relation_index
+) {
+
+	if (external_start_node == NULL || external_current_node == NULL || OUTPUT_SECTION_START_ADDRESS == NULL || NODE_SECTION_Start_Address == NULL) return NULL;
+
+
+	PDynamic_NODE current_node = external_start_node;
+	ULONG64 remember_NODE_SECTION_INDEX = 0xFFFFFFFF;
+
+	do {
+		if (NODE_SECTION_Start_Address->Node_Search_VALUE == current_node->Node_Search_VALUE) {
+
+			// 최초 섹션 -> 인덱스 취득
+			if (remember_NODE_SECTION_INDEX == 0xFFFFFFFF) {
+				remember_NODE_SECTION_INDEX = current_node->NODE_SECTION_INDEX;
+			}
+
+			// 섹션 인덱스 성공적으로 얻었을 때, (같은 Search_Value일 때 작동됨)
+			if (remember_NODE_SECTION_INDEX != 0xFFFFFFFF) {
+
+				// 같은 섹션 인덱스 내에서 순환하도록 함 
+				PDynamic_NODE detected_section_current_node = current_node;
+				do {
+
+					if (remember_NODE_SECTION_INDEX == detected_section_current_node->NODE_SECTION_INDEX) {
+						if (detected_section_current_node->is_end_node) {
+							break;
+						}
+						else {
+							if (Relation_index == detected_section_current_node->NODE_RELATION_INDEX) {
+								/*
+									Relation_Index 같을 때 비교할 수 있음
+								*/
+								if (detected_section_current_node->DATA_SIZE >= DATA_SIZE) {
+									if (memcmp(DATA, detected_section_current_node->DATA, DATA_SIZE) == 0) {
+										*OUTPUT_SECTION_START_ADDRESS = (PDynamic_NODE)detected_section_current_node->NODE_SECTION_START_NODE_ADDRESS;
+										return detected_section_current_node;
+									}
+								}
+
+							}
+						}
+					}
+
+					detected_section_current_node = (PDynamic_NODE)detected_section_current_node->Next_Node;
+				} while (detected_section_current_node != NULL);
+
+				remember_NODE_SECTION_INDEX = 0xFFFFFFFF;
+
+				current_node = detected_section_current_node; // 다음 섹션으로 바로 건너뛰도록함. 
+			}
+			 
+
+		}
+		current_node = (PDynamic_NODE)current_node->Next_Node;
+	} while (current_node != NULL);
+
+	return NULL;
+
+}
